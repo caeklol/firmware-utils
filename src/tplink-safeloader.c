@@ -3981,14 +3981,14 @@ static void build_image(const char *output,
 	    strcasecmp(info->id, "ARCHER-C6U-V1") == 0 ||
 	    strcasecmp(info->id, "ARCHER-C6-V3") == 0 ||
 	    strcasecmp(info->id, "DECO-M4R-V4") == 0 ||
-	    strcasecmp(info->id, "DECO-M4R-V3") == 0 ||
 	    strcasecmp(info->id, "MR70X") == 0 ||
 	    strcasecmp(info->id, "TLWR1043NV5") == 0) {
 		const uint8_t extra_para[2] = {0x01, 0x00};
 		parts[5] = make_extra_para(info, extra_para,
 			sizeof(extra_para));
 	} else if (strcasecmp(info->id, "ARCHER-C6-V2") == 0 ||
-		   strcasecmp(info->id, "TL-WA1201-V2") == 0) {
+	       	   strcasecmp(info->id, "DECO-M4R-V3") == 0 ||
+		   	   strcasecmp(info->id, "TL-WA1201-V2") == 0) {
 		const uint8_t extra_para[2] = {0x00, 0x01};
 		parts[5] = make_extra_para(info, extra_para,
 			sizeof(extra_para));
