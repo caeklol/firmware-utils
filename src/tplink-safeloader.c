@@ -1802,8 +1802,12 @@ static struct device_info boards[] = {
 			{"default-config@0", 0xf80000, 0x10000},
 			{"partition-table@1", 0xf90000, 0x02000},
 			{"fs-uboot@1", 0xfa0000, 0x80000},
+			/*
+			combining stock partitions:
 			{"os-image@1", 0x1020000, 0x320000},
-			{"file-system@1", 0x1340000, 0xc40000},
+			{"file-system@1", 0x1340000, 0xc80000},
+			*/
+			{"firmware", 0x1020000, 0xfa0000},
 			{"soft-version@1", 0x1fc0000, 0x10000},
 			{"profile@1", 0x1fd0000, 0x10000},
 			{"default-config@1", 0x1fe0000, 0x10000},
