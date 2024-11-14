@@ -3980,6 +3980,7 @@ static void build_image(const char *output,
 	    strcasecmp(info->id, "ARCHER-C60-V3") == 0 ||
 	    strcasecmp(info->id, "ARCHER-C6U-V1") == 0 ||
 	    strcasecmp(info->id, "ARCHER-C6-V3") == 0 ||
+	    strcasecmp(info->id, "DECO-M4R-V3") == 0 ||
 	    strcasecmp(info->id, "DECO-M4R-V4") == 0 ||
 	    strcasecmp(info->id, "MR70X") == 0 ||
 	    strcasecmp(info->id, "TLWR1043NV5") == 0) {
