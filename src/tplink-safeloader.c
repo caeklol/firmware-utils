@@ -1775,6 +1775,7 @@ static struct device_info boards[] = {
 			"{product_name:M4R,product_ver:3.0.0,special_id:4A500000}\n"
 			"{product_name:M4R,product_ver:3.0.0,special_id:41550000}\n"
 			"{product_name:M4R,product_ver:3.0.0,special_id:4B520000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:54570000}\n"
 			"{product_name:M4R,product_ver:3.0.0,special_id:42340000}\n",
 		.part_trail = 0x00,
 		.soft_ver = SOFT_VER_TEXT("soft_ver:7.0.0\n"),
