@@ -123,7 +123,6 @@ struct device_info {
 	const char *vendor;
 	enum safeloader_image_type image_type;
 	const char *support_list;
-	bool no_partition_table_length;
 	enum partition_trail_value part_trail;
 	struct {
 		enum soft_ver_type type;
@@ -1778,7 +1777,6 @@ static struct device_info boards[] = {
 			"{product_name:M4R,product_ver:3.0.0,special_id:4B520000}\n"
 			"{product_name:M4R,product_ver:3.0.0,special_id:54570000}\n"
 			"{product_name:M4R,product_ver:3.0.0,special_id:42340000}\n",
-		.no_partition_table_length = false,
 		.part_trail = 0x00,
 		.soft_ver = SOFT_VER_TEXT("soft_ver:7.0.0\n"),
 
@@ -3605,12 +3603,10 @@ static struct image_partition_entry make_partition_table(const struct device_inf
 
 	char *s = (char *)entry.data, *end = (char *)(s+entry.size);
 
-	if (!p->no_partition_table_length) {
-		*(s++) = 0x00;
-		*(s++) = 0x04;
-		*(s++) = 0x00;
-		*(s++) = 0x00;
-	}
+	*(s++) = 0x00;
+	*(s++) = 0x04;
+	*(s++) = 0x00;
+	*(s++) = 0x00;
 
 	size_t i;
 	for (i = 0; p->partitions[i].name; i++) {
