@@ -82,10 +82,46 @@ enum soft_ver_type {
 	SOFT_VER_TYPE_TEXT = 1,
 };
 
+/*
+ * Safeloader image type
+ *   Safeloader images contain a 0x14 byte preamble with image size (big endian
+ *   UINT32) and md5 checksum (16 bytes).
+ *
+ * SAFEFLOADER_TYPE_DEFAULT
+ *   Standard preamble with size including preamble length, and checksum.
+ *   Header of 0x1000 bytes, contents of which are not specified.
+ *   Payload starts at offset 0x1014.
+ *
+ * SAFELOADER_TYPE_VENDOR
+ *   Standard preamble with size including preamble length, and checksum.
+ *   Header contains up to 0x1000 bytes of vendor data, starting with a big endian
+ *   UINT32 size, followed by that number of bytes containing (text) data.
+ *   Padded with 0xFF. Payload starts at offset 0x1014.
+ *
+ * SAFELOADER_TYPE_CLOUD
+ *   Standard preamble with size including preamble length, and checksum.
+ *   Followed by the 'fw-type:Cloud' string and some (unknown) data.
+ *   Payload starts at offset 0x1014.
+ *
+ * SAFELOADER_TYPE_QNEW
+ *   Reversed order preamble, with (apparent) md5 checksum before the image
+ *   size. The size does not include the preamble length.
+ *   Header starts with 0x3C bytes, starting with the string '?NEW' (format not
+ *   understood). Then another 0x1000 bytes follow, with the data payload
+ *   starting at 0x1050.
+ */
+enum safeloader_image_type {
+        SAFELOADER_TYPE_DEFAULT,
+        SAFELOADER_TYPE_VENDOR,
+        SAFELOADER_TYPE_CLOUD,
+        SAFELOADER_TYPE_QNEW,
+};
+
 /** Firmware layout description */
 struct device_info {
 	const char *id;
 	const char *vendor;
+	enum safeloader_image_type image_type;
 	const char *support_list;
 	enum partition_trail_value part_trail;
 	struct {
@@ -127,41 +163,6 @@ struct __attribute__((__packed__)) soft_version {
 	uint32_t compat_level;
 };
 
-/*
- * Safeloader image type
- *   Safeloader images contain a 0x14 byte preamble with image size (big endian
- *   UINT32) and md5 checksum (16 bytes).
- *
- * SAFEFLOADER_TYPE_DEFAULT
- *   Standard preamble with size including preamble length, and checksum.
- *   Header of 0x1000 bytes, contents of which are not specified.
- *   Payload starts at offset 0x1014.
- *
- * SAFELOADER_TYPE_VENDOR
- *   Standard preamble with size including preamble length, and checksum.
- *   Header contains up to 0x1000 bytes of vendor data, starting with a big endian
- *   UINT32 size, followed by that number of bytes containing (text) data.
- *   Padded with 0xFF. Payload starts at offset 0x1014.
- *
- * SAFELOADER_TYPE_CLOUD
- *   Standard preamble with size including preamble length, and checksum.
- *   Followed by the 'fw-type:Cloud' string and some (unknown) data.
- *   Payload starts at offset 0x1014.
- *
- * SAFELOADER_TYPE_QNEW
- *   Reversed order preamble, with (apparent) md5 checksum before the image
- *   size. The size does not include the preamble length.
- *   Header starts with 0x3C bytes, starting with the string '?NEW' (format not
- *   understood). Then another 0x1000 bytes follow, with the data payload
- *   starting at 0x1050.
- */
-enum safeloader_image_type {
-	SAFELOADER_TYPE_DEFAULT,
-	SAFELOADER_TYPE_VENDOR,
-	SAFELOADER_TYPE_CLOUD,
-	SAFELOADER_TYPE_QNEW,
-};
-
 /* Internal representation of safeloader image data */
 struct safeloader_image_info {
 	enum safeloader_image_type type;
@@ -181,6 +182,7 @@ struct safeloader_image_info {
 
 static const uint8_t jffs2_eof_mark[4] = {0xde, 0xad, 0xc0, 0xde};
 
+static const char *HEADER_ID_CLOUD = "fw-type:Cloud";
 
 /**
    Salt for the MD5 hash
@@ -1764,6 +1766,7 @@ static struct device_info boards[] = {
 	{
 		.id = "DECO-M4R-V3",
 		.vendor = "",
+		.image_type = SAFELOADER_TYPE_CLOUD,
 		.support_list =
 			"SupportList:\n"
 			"{product_name:M4R,product_ver:3.0.0,special_id:55530000}\n"
@@ -3826,7 +3829,10 @@ static void * generate_factory_image(struct device_info *info, const struct imag
 	memset(image, 0xff, *len);
 	put32(image, *len);
 
-	if (info->vendor) {
+	if (info->image_type == SAFELOADER_TYPE_CLOUD) {
+		static const char *CLOUD_STR = "fw-type:Cloud\n";
+		memcpy(image + SAFELOADER_PREAMBLE_SIZE, CLOUD_STR, strlen(CLOUD_STR));
+	} else if (info->vendor) {
 		size_t vendor_len = strlen(info->vendor);
 		put32(image + SAFELOADER_PREAMBLE_SIZE, vendor_len);
 		memcpy(image + SAFELOADER_PREAMBLE_SIZE + 0x4, info->vendor, vendor_len);
@@ -4225,7 +4231,6 @@ static void safeloader_read_partition(FILE *input_file, size_t payload_offset,
 
 static void safeloader_parse_image(FILE *input_file, struct safeloader_image_info *image)
 {
-	static const char *HEADER_ID_CLOUD = "fw-type:Cloud";
 	static const char *HEADER_ID_QNEW = "?NEW";
 
 	char buf[64];
