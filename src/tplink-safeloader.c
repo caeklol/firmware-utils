@@ -182,7 +182,6 @@ struct safeloader_image_info {
 
 static const uint8_t jffs2_eof_mark[4] = {0xde, 0xad, 0xc0, 0xde};
 
-static const char *HEADER_ID_CLOUD = "fw-type:Cloud";
 
 /**
    Salt for the MD5 hash
@@ -4232,6 +4231,7 @@ static void safeloader_read_partition(FILE *input_file, size_t payload_offset,
 
 static void safeloader_parse_image(FILE *input_file, struct safeloader_image_info *image)
 {
+	static const char *HEADER_ID_CLOUD = "fw-type:Cloud";
 	static const char *HEADER_ID_QNEW = "?NEW";
 
 	char buf[64];
