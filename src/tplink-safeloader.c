@@ -123,6 +123,7 @@ struct device_info {
 	const char *vendor;
 	enum safeloader_image_type image_type;
 	const char *support_list;
+        uint32_t partition_table_size_override;
 	enum partition_trail_value part_trail;
 	struct {
 		enum soft_ver_type type;
@@ -1777,6 +1778,7 @@ static struct device_info boards[] = {
 			"{product_name:M4R,product_ver:3.0.0,special_id:54570000}\n"
 			"{product_name:M4R,product_ver:3.0.0,special_id:42340000}\n",
 		.part_trail = 0x00,
+		.partition_table_size_override = 0xFFFFFFFF,
 		.soft_ver = SOFT_VER_TEXT("soft_ver:7.0.0\n"),
 
 		.partitions = {
@@ -1826,6 +1828,73 @@ static struct device_info boards[] = {
 		.first_sysupgrade_partition = "os-image@1",
 		.last_sysupgrade_partition = "file-system@1"
 	},
+	
+	/** Firmware layout for the Deco M4R v3 */
+	{
+		.id = "DECO-M9Plus",
+		.vendor = "",
+		.image_type = SAFELOADER_TYPE_CLOUD,
+		.support_list =
+			"SupportList:\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:55530000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:45550000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:43410000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:4A500000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:41550000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:4B520000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:54570000}\n"
+			"{product_name:M4R,product_ver:3.0.0,special_id:42340000}\n",
+		.part_trail = 0x00,
+		.partition_table_size_override = 0xFFFFFFFF,
+		.soft_ver = SOFT_VER_TEXT("soft_ver:7.0.0\n"),
+
+		.partitions = {
+			{"SBL1", 0x00000, 0x30000},
+			{"boot-config_0", 0x30000, 0x10000},
+			{"MIBIB", 0x40000, 0x10000},
+			{"boot-config_1", 0x50000, 0x10000},
+			{"QSEE", 0x60000, 0x60000},
+			{"CDT", 0xc0000, 0x10000},
+			{"DDRPARAMS", 0xd0000, 0x10000},
+			{"uboot-env", 0xe0000, 0x10000},
+			{"fs-uboot@0", 0xf0000, 0x80000},
+			{"radio", 0x170000, 0x10000},
+			{"default-mac", 0x180000, 0x01000},
+			{"device-id", 0x182000, 0x01000},
+			{"product-info", 0x183000, 0x05000},
+			{"support-list", 0x190000, 0x10000},
+			{"user-config", 0x200000, 0x10000},
+			{"device-config", 0x210000, 0x10000},
+			{"group-info", 0x220000, 0x10000},
+			{"partition-table@0", 0x230000, 0x02000},
+			{"os-image@0", 0x240000, 0x320000},
+			{"file-system@0", 0x560000, 0xa00000},
+			{"soft-version@0", 0xf60000, 0x10000},
+			{"profile@0", 0xf70000, 0x10000},
+			{"default-config@0", 0xf80000, 0x10000},
+			{"partition-table@1", 0xf90000, 0x02000},
+			{"fs-uboot@1", 0xfa0000, 0x80000},
+			/*
+			combining stock partitions:
+			{"os-image@1", 0x1020000, 0x320000},
+			{"file-system@1", 0x1340000, 0xc80000},
+			*/
+			{"firmware", 0x1020000, 0xfa0000},
+			{"soft-version@1", 0x1fc0000, 0x10000},
+			{"profile@1", 0x1fd0000, 0x10000},
+			{"default-config@1", 0x1fe0000, 0x10000},
+			{"url-sig", 0x1ff0000, 0x10000},
+			{NULL, 0, 0}
+		},
+
+		.partition_names.partition_table = "partition-table@1",
+		.partition_names.soft_ver = "soft-version@1",
+		.partition_names.os_image = "os-image@1",
+		.partition_names.file_system = "file-system@1",
+
+		.first_sysupgrade_partition = "os-image@1",
+		.last_sysupgrade_partition = "file-system@1"
+	},	
 
 	/** Firmware layout for the Deco M4R v4 */
 	{
@@ -3601,17 +3670,25 @@ static struct image_partition_entry make_partition_table(const struct device_inf
 	struct image_partition_entry entry = alloc_image_partition(p->partition_names.partition_table, SAFELOADER_PAYLOAD_TABLE_SIZE);
 
 	char *s = (char *)entry.data, *end = (char *)(s+entry.size);
-
-	*(s++) = 0x00;
-	*(s++) = 0x04;
-	*(s++) = 0x00;
-	*(s++) = 0x00;
+	
+	if (p->partition_table_size_override != 0x00000000) {
+		printf("writing %x\n", p->partition_table_size_override);
+		memcpy(s, &p->partition_table_size_override, 4);
+		s += 4;
+	} else {
+		printf("writing %x\n", 0x0);
+		*(s++) = 0x00;
+		*(s++) = 0x04;
+		*(s++) = 0x00;
+		*(s++) = 0x00;
+	}
 
 	size_t i;
 	for (i = 0; p->partitions[i].name; i++) {
 		size_t len = end-s;
 		size_t w = snprintf(s, len, "partition %s base 0x%05x size 0x%05x\n",
 			p->partitions[i].name, p->partitions[i].base, p->partitions[i].size);
+		//printf("partition %s base 0x%05x size 0x%05x\n", p->partitions[i].name, p->partitions[i].base, p->partitions[i].size);
 
 		if (w > len-1)
 			error(1, 0, "flash partition table overflow?");
@@ -3947,8 +4024,10 @@ static void build_image(const char *output,
 		if (kernel.st_size > firmware_partition->size)
 			error(1, 0, "kernel overflowed firmware partition\n");
 
-		for (i = MAX_PARTITIONS-1; i >= firmware_partition_index + 1; i--)
+		for (i = MAX_PARTITIONS-1; i >= firmware_partition_index + 1; i--) {
+			printf("copy slot %ld (%s) to slot %ld\n", i, info->partitions[i].name, i+1);
 			info->partitions[i+1] = info->partitions[i];
+		}
 
 		file_system_partition->name = info->partition_names.file_system;
 
