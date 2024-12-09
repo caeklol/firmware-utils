@@ -1820,7 +1820,7 @@ static struct device_info boards[] = {
 			{NULL, 0, 0}
 		},
 
-		.partition_names.partition_table = "partition-table@1",
+		.partition_names.partition_table = "partition-table@0",
 		.partition_names.soft_ver = "soft-version@1",
 		.partition_names.os_image = "os-image@1",
 		.partition_names.file_system = "file-system@1",
